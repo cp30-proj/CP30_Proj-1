@@ -5,13 +5,35 @@
  *  Description: The Pong class.
  */
 package pong;
-/* @author Patrick Matthew J. Chan [LBYCP24-EQ1]*/
-public class Pong{
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Main Class ~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args){
-        System.out.println("hi");
+
+import java.applet.Applet;
+import java.awt.Graphics;
+
+/* @author Patrick Matthew J. Chan*/
+public class Pong extends Applet{
+
+    @Override
+    public void init() {
+        super.init(); //To change body of generated methods, choose Tools | Templates.
     }
+
+    @Override
+    public void paint(Graphics g) {
+        super.paint(g); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void update(Graphics g) {
+        //super.update(g); //To change body of generated methods, choose Tools | Templates.
+        paint(g);
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
 }
