@@ -19,13 +19,20 @@ public class Ball {
     public static boolean SLOW_BALL = false;
     
     public static int HITS_BEFORE_SPEED_UP = 5; //0 means no speed up   //paddle hits
+    public static int DEFAULT_HITS_B4_NEXT_BALL = 4;
     
+    
+    public int hitsBeforeNextBall = DEFAULT_HITS_B4_NEXT_BALL; //0 means this does not apply    
     public int x,y;
     public int oldx,oldy;
     public int diam = 30;
     public int width = diam, height = diam;
     public int dx,dy;   //velocities
     public int amtOfHits;
+    public boolean isDead = false;
+    public boolean triggerNextBall = false;
+    public boolean nextBallTriggered = false;
+    public int totHitCtr = 0;
     //
     private Pong pong;
     public Random rng;
@@ -39,7 +46,12 @@ public class Ball {
     }
     
     public void spawn(){
+            hitsBeforeNextBall = DEFAULT_HITS_B4_NEXT_BALL;
+            isDead = false;
+            triggerNextBall = false;
+            nextBallTriggered  = false;
             this.amtOfHits = 0;
+            this.totHitCtr = 0;
             this.x = pong.width / 2 - this.width / 2;   oldx=x;
             this.y = pong.height / 2 - this.height / 2; oldy=y;
             
@@ -98,10 +110,12 @@ public class Ball {
         //left right (death) walls
         if(x< 0-diam-3){   //left wall (death)
             paddle2.score++;
-            spawn();
+            //spawn();
+            isDead = true;
         } else if(x> pong.width + diam + 3){  //right wall (death)
             paddle1.score++;
-            spawn();
+            //spawn();
+            isDead = true;
         }
         
         
@@ -117,6 +131,7 @@ public class Ball {
                     amtOfHits = 0;
                 }
                 amtOfHits++;
+                totHitCtr++;
             }
             //corner
             if(y+diam >= paddle1.getUY()  &&  y+diam <= paddle1.getUY() + Paddle.CTOL){ //super corner
@@ -140,6 +155,7 @@ public class Ball {
                     amtOfHits = 0;
                 }
                 amtOfHits++;
+                totHitCtr++;
             }
             //corner
             if(y+diam >= paddle2.getUY()  &&  y+diam <= paddle2.getUY() + Paddle.CTOL){ //super corner
@@ -152,6 +168,13 @@ public class Ball {
             }
         }
         
+        if(totHitCtr == hitsBeforeNextBall && !nextBallTriggered && hitsBeforeNextBall!=0){
+            triggerNextBall = true;    //to be deactivated by "Pong" class.
+            hitsBeforeNextBall = 3* hitsBeforeNextBall;
+        }
+        if(nextBallTriggered && totHitCtr<hitsBeforeNextBall){
+            nextBallTriggered = false;
+        }
     }
     
     

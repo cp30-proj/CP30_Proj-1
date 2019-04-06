@@ -111,6 +111,27 @@ public class Paddle {//actually player also i think
         }
     }
     
+    public void moveUp(double percentSpd){
+        int speed = (int)percentSpd/100*PADDLE_SPEED;
+        //oldy = y;
+        
+        if(y-speed <= 0){
+            y=0; 
+        } else {
+            y-=speed;
+        }
+    }
+    public void moveDn(double percentSpd){
+        //oldy = y;
+        int speed = (int)percentSpd/100*PADDLE_SPEED;
+        
+        if(y+HEIGHT+speed >= pong.height){
+            y=pong.height-HEIGHT;
+        } else {
+            y+=speed;
+        }
+    }
+    
     
     
     //corners of the paddle
