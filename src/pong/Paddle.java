@@ -1,5 +1,4 @@
 /*
- *  © 2019 by Patrick Matthew Chan
  *  File: Paddle.java
  *  Package: pong
  *  Description: The Paddle class.
@@ -10,7 +9,7 @@ package pong;
 import java.awt.Color;
 import java.awt.Graphics;
 
-/*@author Patrick Matthew J. Chan*/
+
 public class Paddle {//actually player also i think
     
     public int paddleNumber;
@@ -21,7 +20,7 @@ public class Paddle {//actually player also i think
     public int x,y;
     public int oldx,oldy;
     public static int WIDTH = 30,HEIGHT = 200;
-    public static int CTOL = 3;    //corner tolerance (SUPER corner square WIDTH)
+    public static int CTOL = 7;    //corner tolerance (SUPER corner square WIDTH)
     public static boolean SHOW_PAST_FRAME = false;
     
     

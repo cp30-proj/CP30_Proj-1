@@ -1,5 +1,4 @@
 /*
- *  © 2019 by Patrick Matthew Chan
  *  File: Renderer.java
  *  Package: pong
  *  Description: The Renderer class.
@@ -12,7 +11,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import javax.swing.JPanel;
 
-/*@author Patrick Matthew J. Chan*/
+
 public class Renderer extends JPanel{
 
     @Override

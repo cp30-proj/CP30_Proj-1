@@ -1,5 +1,4 @@
 /*
- *  © 2019 by Patrick Matthew Chan
  *  File: Ball.java
  *  Package: pong
  *  Description: The Ball class.
@@ -11,31 +10,36 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.util.Random;
 
-/*@author Patrick Matthew J. Chan*/
+
 public class Ball {
+    //debug ish
     public static boolean ALL_SERVE_LEFT = false;
     public static boolean PRINT_SPAWN_SPEEDS = false;
     public static boolean SHOW_PAST_FRAME = false;
     public static boolean SLOW_BALL = false;
     
-
+    public static int HITS_BEFORE_SPEED_UP = 5; //0 means no speed up   //paddle hits
+    
     public int x,y;
     public int oldx,oldy;
     public int diam = 30;
     public int width = diam, height = diam;
     public int dx,dy;   //velocities
+    public int amtOfHits;
     //
     private Pong pong;
     public Random rng;
+    public int SPEED_CAP;
     
     public Ball(Pong pong) {
         this.pong = pong;
         rng = new Random();
+        SPEED_CAP = Paddle.WIDTH-1; //pong.width/10;
         spawn();
     }
     
     public void spawn(){
-            //this.amountOfHits = 0;
+            this.amtOfHits = 0;
             this.x = pong.width / 2 - this.width / 2;   oldx=x;
             this.y = pong.height / 2 - this.height / 2; oldy=y;
             
@@ -92,11 +96,11 @@ public class Ball {
             y = pong.height - height;                                
         }
         //left right (death) walls
-        if(x< 0-diam-3){   //left wall
-            //////////////////////////////////////TODO: here: player 2 ++ score
+        if(x< 0-diam-3){   //left wall (death)
+            paddle2.score++;
             spawn();
-        } else if(x> pong.width + diam + 3){  //right wall
-            //////////////////////////////////////TODO: here: player 1 ++ score
+        } else if(x> pong.width + diam + 3){  //right wall (death)
+            paddle1.score++;
             spawn();
         }
         
@@ -105,6 +109,14 @@ public class Ball {
         if(x<=paddle1.getRX()  && (x+diam/2)>=paddle1.getLX()){ //LEFT paddle
             if(y+diam >= paddle1.getUY()  &&  y<=  paddle1.getDY()){
                 dx = Math.abs(dx);//ball shd move forward
+                ///
+                if(amtOfHits >= HITS_BEFORE_SPEED_UP && HITS_BEFORE_SPEED_UP!=0){
+                    if(dx<SPEED_CAP){
+                        dx++;   //forward kasi
+                    }
+                    amtOfHits = 0;
+                }
+                amtOfHits++;
             }
             //corner
             if(y+diam >= paddle1.getUY()  &&  y+diam <= paddle1.getUY() + Paddle.CTOL){ //super corner
@@ -120,6 +132,14 @@ public class Ball {
         if(x+diam >= paddle2.getLX()  && (x+diam/2)<=paddle2.getRX()){  //RIGHT paddle
             if(y+diam >= paddle2.getUY()  &&  y<=  paddle2.getDY()){
                 dx = -Math.abs(dx);//ball shd move backward
+                ///
+                if(amtOfHits >= HITS_BEFORE_SPEED_UP && HITS_BEFORE_SPEED_UP!=0){
+                    if(dx<SPEED_CAP){
+                        dx--;   //backward kasi
+                    }
+                    amtOfHits = 0;
+                }
+                amtOfHits++;
             }
             //corner
             if(y+diam >= paddle2.getUY()  &&  y+diam <= paddle2.getUY() + Paddle.CTOL){ //super corner
