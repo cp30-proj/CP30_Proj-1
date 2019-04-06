@@ -16,6 +16,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Random;
 import javax.swing.JFrame;
@@ -38,11 +39,14 @@ public class Pong implements ActionListener, KeyListener{
     public Renderer renderer;
     public Paddle player1;
     public Paddle player2;
-    public Ball ball;
+    public ArrayList<Ball> balls = new ArrayList<>();
+    //public Ball[] balls;         //changed since after v1.0 --> have multiball
     //public Ball ball2;
     public int gameStatus = 0;  //0=start/splash, 1=paused, 2=playing, 3=game over
     public int scoreLimit = 7;
     public int winnerP;
+    public int botDir = 0;  //-1 up, 0 neutral, 1 down
+    double botSpeedPercent = 100;
     
 
     public Pong() {
@@ -65,7 +69,9 @@ public class Pong implements ActionListener, KeyListener{
         gameStatus = 2;
         player1 = new Paddle(this,1);
         player2 = new Paddle(this,2);
-        ball = new Ball(this);
+        balls.clear();
+        balls.add(new Ball(this));
+        //balls = new Ball(this);
         //ball2 = new Ball(this);
     }
     
@@ -94,7 +100,12 @@ public class Pong implements ActionListener, KeyListener{
 
             player1.render(g);
             player2.render(g);
-            ball.render(g);
+            for (Ball ball : balls) {
+                if(!ball.isDead){
+                    ball.render(g);
+                }
+            }
+            //ball.render(g);
             //ball2.render(g);
         }
         ////////  "PONG"  text
@@ -141,6 +152,14 @@ public class Pong implements ActionListener, KeyListener{
                         
                     case 2:
                         diffString = "Hard";
+                        break;
+                        
+                    case 3:
+                        diffString = "Very Hard";
+                        break;
+                        
+                    case 4:
+                        diffString = "Insane";
                         break;
                 }
                 String startText3b = "<< ["+diffString+"] >>";
@@ -251,43 +270,148 @@ public class Pong implements ActionListener, KeyListener{
                 player2.moveDn();
             }
         } else {    //computer opponent
-            int paddleCtr = (player2.getUY() + player2.getDY())/2;
-            
-            if(botMoves < 10){
-                if(ball.y < paddleCtr){
-                    player2.moveUp();
-                    botMoves++;
+            botSpeedPercent = 100;
+            if(botDir == 1){
+                player2.moveDn(botSpeedPercent);
+            } else if(botDir == -1){
+                player2.moveUp(botSpeedPercent);
+            }
+            ///
+            int quarterPaddle = Paddle.HEIGHT/4;
+            Ball closestBall = null;
+            for (Ball ball : balls) {
+                if(!ball.isDead){
+                    if ((closestBall==null) || (Math.abs(ball.x+ball.diam - player2.getLX()) <  Math.abs(closestBall.x+closestBall.diam - player2.getLX()))){
+                        closestBall = ball;
+                    }
                 }
-                if(ball.y > paddleCtr){
-                    player2.moveDn();
-                    botMoves++;
-                }
-            } else {
-                if(botCooldown > 0){
-                    //cooldown in progress
-                    botCooldown--;
-                    if(botCooldown <= 0){
-                        botMoves = 0;
+            }
+            if(closestBall != null){    //otherwise all balls are presumed dead
+                if(botMoves < 1){
+                    if(closestBall.getCtrY() < player2.y+quarterPaddle){
+                        //player2.moveUp(botSpeedPercent);
+                        botDir = -1;
+                        botMoves++;
+                    } else if (closestBall.getCtrY() > player2.y + 3*quarterPaddle){
+                        //player2.moveDn(botSpeedPercent);
+                        botDir = 1;
+                        botMoves++;
+                    } else {
+                        botDir = 0;
                     }
                 } else {
-                    //start cooldown
-                    if (botDifficulty == 0){
-                            botCooldown = 27;
-                    }
-                    if (botDifficulty == 1){
-                            botCooldown = 20;
-                    }
-                    if (botDifficulty == 2){
-                            botCooldown = 15;
+                    if(botCooldown > 0){
+                        //cooldown in progress
+                        botCooldown--;
+                        if(botCooldown <= 0){
+                            botMoves = 0;
+                        }
+                    } else {
+                        //start cooldown
+                        switch (botDifficulty) {
+                            case 1:
+                                botCooldown = 12;
+                                break;
+                            case 2:
+                                botCooldown = 7;
+                                botSpeedPercent = 120;
+                                break;
+                            case 3:
+                                botCooldown = 1;
+                                botSpeedPercent = 170;
+                                break;
+                            case 4:
+                                botCooldown = -100;
+                                botMoves = 0;
+                                botSpeedPercent = 5300;
+                                break;
+                            default:
+                            case 0:
+                                botCooldown = 22;
+                                botSpeedPercent = 80;
+                                break;
+                        }
                     }
                 }
             }
                     
         }
-        ball.oldx = ball.x;
-        ball.oldy = ball.y;
-        //// redraw ball
-        ball.update(player1, player2);
+        //remove dead balls, update alive ones
+        int nextBallRequestCount = 0;
+        int aliveBalls = 0;
+        for (Ball ball : balls) {
+            //0. count requests for next balls
+            if(ball.triggerNextBall){
+                nextBallRequestCount++;
+                ball.nextBallTriggered = true;
+                ball.triggerNextBall = false;
+            }
+            
+            //1. count alive ones
+            if(!ball.isDead){
+                aliveBalls++;
+            }
+        }
+        //System.out.println("After 0. and 1.");  //debug
+        //System.out.println("aliveBalls = " + aliveBalls);  //debug
+        //System.out.println("nextBallR.Cnt = " + nextBallRequestCount);  //debug
+        //System.out.println("balls.size() = " + balls.size());   //debug
+        
+        //2. grant next ball requests
+        for (Ball ball : balls) {
+            if(ball.isDead && nextBallRequestCount > 0){
+                nextBallRequestCount--;
+                aliveBalls++;
+                ball.spawn();
+            }
+        }
+        //System.out.println("After 2a");  //debug
+        //System.out.println("aliveBalls = " + aliveBalls);  //debug
+        //System.out.println("nextBallR.Cnt = " + nextBallRequestCount);  //debug
+        //System.out.println("balls.size() = " + balls.size());   //debug
+        
+        while(nextBallRequestCount > 0){
+            balls.add(new Ball(this));  //since auto spawn on creation
+            nextBallRequestCount--;
+            aliveBalls++;
+        }
+        //System.out.println("After 2b");  //debug
+        //System.out.println("aliveBalls = " + aliveBalls);  //debug
+        //System.out.println("nextBallR.Cnt = " + nextBallRequestCount);  //debug
+        //System.out.println("balls.size() = " + balls.size());   //debug
+        
+        //3. if all dead, spawn new ball
+        if(aliveBalls <= 0){
+            if(balls.get(0) != null){
+                balls.get(0).spawn();
+            } else {
+                balls.clear();
+                balls.add(new Ball(this));
+            }
+        }
+        //System.out.println("After 3");  //debug
+        //System.out.println("aliveBalls = " + aliveBalls);  //debug
+        //System.out.println("nextBallR.Cnt = " + nextBallRequestCount);  //debug
+        //System.out.println("balls.size() = " + balls.size());   //debug
+        
+        //4. update each ball
+        for (Ball ball : balls) {
+            if(!ball.isDead){
+                ball.oldx = ball.x;
+                ball.oldy = ball.y;
+                //// redraw ball
+                ball.update(player1, player2);
+                /////////
+            }
+        }
+        //System.out.println("After 4");  //debug
+        //System.out.println("aliveBalls = " + aliveBalls);  //debug
+        //System.out.println("nextBallR.Cnt = " + nextBallRequestCount);  //debug
+        //System.out.println("balls.size() = " + balls.size());   //debug
+        //System.out.println("========================"); //debug
+        
+        
+        
         
         
         
@@ -325,7 +449,29 @@ public class Pong implements ActionListener, KeyListener{
             up = true;
         } else if(id == KeyEvent.VK_DOWN){
             dn = true;
-        }
+        } else if(id == KeyEvent.VK_A || id == KeyEvent.VK_LEFT){
+            if(gameStatus == 0){
+                if(selectingDifficulty){
+                    botDifficulty--;
+                    if(botDifficulty < 0){
+                        botDifficulty = 4;
+                    }
+                } else if (scoreLimit > 1){
+                    scoreLimit --;
+                }
+            }
+        } else if(id == KeyEvent.VK_D || id == KeyEvent.VK_RIGHT){
+            if(gameStatus == 0){
+                if(selectingDifficulty){
+                    botDifficulty++;
+                    if(botDifficulty > 4){
+                        botDifficulty = 0;
+                    }
+                } else {
+                    scoreLimit ++;
+                }
+            }
+        } 
     }
 
     @Override
@@ -340,28 +486,6 @@ public class Pong implements ActionListener, KeyListener{
             up = false;
         } else if(id == KeyEvent.VK_DOWN){
             dn = false;
-        } else if(id == KeyEvent.VK_A || id == KeyEvent.VK_LEFT){
-            if(gameStatus == 0){
-                if(selectingDifficulty){
-                    botDifficulty--;
-                    if(botDifficulty < 0){
-                        botDifficulty = 2;
-                    }
-                } else if (scoreLimit > 1){
-                    scoreLimit --;
-                }
-            }
-        } else if(id == KeyEvent.VK_D || id == KeyEvent.VK_RIGHT){
-            if(gameStatus == 0){
-                if(selectingDifficulty){
-                    botDifficulty++;
-                    if(botDifficulty > 2){
-                        botDifficulty = 0;
-                    }
-                } else if (scoreLimit < 20){
-                    scoreLimit ++;
-                }
-            }
         } else if(id == KeyEvent.VK_SHIFT){
             if(gameStatus == 0){
                 bot = true;
