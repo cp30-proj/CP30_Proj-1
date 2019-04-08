@@ -34,6 +34,14 @@ public class PlayerState {
 
     
     //methods
+    public int readAsUnsignedByte(byte input){
+        if(input<0){
+            return input + 256;
+        } else {
+            return input;
+        }
+    }
+    
     public int getBit(byte input,int position){ //LSB is posn 0
        return (input >> position) & 1;
     }
@@ -49,10 +57,10 @@ public class PlayerState {
     void type1(byte[] byteBuffer){
         //pNo = byteBuffer[2] >> 4;
         conType 	= byteBuffer[2] & 0b00001111;
-        lasX 		= byteBuffer[3];   //left analog stick
-        lasY 		= byteBuffer[4];
-        rasX 		= byteBuffer[5];   //right analog stick
-        rasY 		= byteBuffer[6];
+        lasX 		= readAsUnsignedByte(byteBuffer[3]);   //left analog stick
+        lasY 		= readAsUnsignedByte(byteBuffer[4]);        //value from 0 to 255.
+        rasX 		= readAsUnsignedByte(byteBuffer[5]);   //right analog stick
+        rasY 		= readAsUnsignedByte(byteBuffer[6]);
         fbA 		= boolFrByte(byteBuffer[7],7);
         fbB 		= boolFrByte(byteBuffer[7],6);
         fbX 		= boolFrByte(byteBuffer[7],5);
@@ -77,19 +85,19 @@ public class PlayerState {
         conType 	= byteBuffer[2] & 0b00001111;
         switch (reqByteNum){
             case 3:
-                lasX 		= byteBuffer[3];   //left analog stick
+                lasX 		= readAsUnsignedByte(byteBuffer[3]);   //left analog stick
                 break;
                 
             case 4:
-                lasY 		= byteBuffer[3];
+                lasY 		= readAsUnsignedByte(byteBuffer[3]);
                 break;
                 
             case 5:
-                rasX 		= byteBuffer[3];   //right analog stick
+                rasX 		= readAsUnsignedByte(byteBuffer[3]);   //right analog stick
                 break;
                 
             case 6:
-                rasY 		= byteBuffer[3];
+                rasY 		= readAsUnsignedByte(byteBuffer[3]);
                 break;
                 
             case 7:
@@ -123,6 +131,84 @@ public class PlayerState {
                         " -- invalid [requested byte ("+reqByteNum+
                         ")]!");
                 break;
+        }
+    }
+    
+    
+    boolean readButton(CM button){
+        switch(button){
+            case A_FACE_BUTTON:
+                return fbA;
+                
+            case B_FACE_BUTTON:
+                return fbB;
+                
+            case X_FACE_BUTTON:
+                return fbX;
+                
+            case Y_FACE_BUTTON:
+                return fbY;
+                
+            case UP_DPAD:
+                return dpU;
+                
+            case DOWN_DPAD:
+                return dpD;
+                
+            case LEFT_DPAD:
+                return dpL;
+                
+            case RIGHT_DPAD:
+                return dpR;
+                
+            case START_BUTTON:
+                return btnStart;
+                
+            case SELECT_BUTTON:
+                return btnSelect;
+                
+            case LEFT_STICK_BUTTON:
+                return stickL;
+                
+            case RIGHT_STICK_BUTTON:
+                return stickR;
+                
+            case LEFT_SHOULDER:
+                return shL;
+                
+            case RIGHT_SHOULDER:
+                return shR;
+                
+            case LEFT_TRIGGER:
+                return trigL;
+                
+            case RIGHT_TRIGGER:
+                return trigR;
+                
+            default:
+                System.err.println("Oi, ["+button+"] is not a Button. It's a Stick Direction!");
+                return false;       
+        }
+    }
+    
+    
+    int readAnalogAxis(CM axis){
+        switch(axis){
+            case LEFT_ANALOG_STICK_X:
+                return lasX;
+                
+            case LEFT_ANALOG_STICK_Y:
+                return lasY;
+                
+            case RIGHT_ANALOG_STICK_X:
+                return rasX;
+                
+            case RIGHT_ANALOG_STICK_Y:
+                return rasY;
+                
+            default:
+                System.err.println("Hey, ["+axis+"] is not an Analog Axis. It is just a simple button!");
+                return 127;
         }
     }
     

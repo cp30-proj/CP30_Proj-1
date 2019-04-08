@@ -19,12 +19,23 @@ import java.awt.event.KeyListener;
 import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Random;
+import javafx.scene.input.KeyCode;
 import javax.swing.JFrame;
 import javax.swing.Timer;
 
 
 public class Pong implements ActionListener, KeyListener{
 
+    UCMI ucmi = new UCMI();
+    ////////////////////////-----C O N T R O L S--------/////////////////////
+    //first index = player no. |  second index = the "item"  [[all indices correspond to one another]]
+    String[][] gameControls; //in-game "name" of controls (general)
+    double[][] directionalGroupNo;   //say: {up,down,left,right,a,b}  would be {1.1, 1.2, 1.3, 1.4, 2, 3} //assumed .1=up .2=dn .3=lf .4=rt | .0=not directional
+    int[][] kybdControls;   //keyCodes for keyboard input
+    String[][] uartControls;
+    boolean disableCMInput = false;
+    //////////////////////------------------------------/////////////////////
+    
     public boolean w,s,up,dn;       //better simultaneous key handling
     public boolean bot = false;     //true if vs. computer.
     public boolean selectingDifficulty;
@@ -50,6 +61,35 @@ public class Pong implements ActionListener, KeyListener{
     
 
     public Pong() {
+        ucmi.init();
+        if(ucmi.isPortConnected){
+            ucmi.ReqPlayer(1);
+            ucmi.ReqPlayer(2);
+            System.out.println("port connected. 1st requests sent.");
+        }
+        String[] genControlNames = new String[]{"Up","Down","Left","Right","Start","Select","Quit"};
+        double[]  genDirGrpNo = new double[]{1.1,1.2,1.3,1.4,2,3,4};
+        ///////
+        gameControls = new String[2][];
+        for (int i = 0; i < gameControls.length; i++) {
+            gameControls[i] =  genControlNames;
+        }
+        ////////
+        directionalGroupNo = new double[2][];
+        for (int i = 0; i < directionalGroupNo.length; i++) {
+            directionalGroupNo[i] = genDirGrpNo;
+        }
+        ////////
+        kybdControls = new int[2][];
+        kybdControls[0] = new int[]{KeyEvent.VK_W,KeyEvent.VK_S,KeyEvent.VK_A,KeyEvent.VK_D,KeyEvent.VK_SPACE,KeyEvent.VK_SHIFT,KeyEvent.VK_ESCAPE};    //P1 default
+        kybdControls[1] = new int[]{KeyEvent.VK_UP,KeyEvent.VK_DOWN,KeyEvent.VK_LEFT,KeyEvent.VK_RIGHT,KeyEvent.VK_SPACE,KeyEvent.VK_SHIFT,KeyEvent.VK_ESCAPE};    //P2 default
+        ////////
+        uartControls = new String[2][];
+            //^waiting
+        
+        
+        
+        
         //timer
         Timer timer = new Timer(20, this);
         
@@ -82,6 +122,14 @@ public class Pong implements ActionListener, KeyListener{
         
         
         if(gameStatus == 1 || gameStatus == 2){ //graphics during game play
+            //req ucmi
+            if(ucmi.isPortConnected){
+                ucmi.ReqPlayer(1);
+                if(!bot){
+                    ucmi.ReqPlayer(2);
+                }
+            }
+            
             g.setColor(Color.LIGHT_GRAY);
             g.setStroke(new BasicStroke(4f));
             g.drawLine(width/2, 0, width/2, height);
@@ -110,6 +158,12 @@ public class Pong implements ActionListener, KeyListener{
         }
         ////////  "PONG"  text
         if(gameStatus == 0 || gameStatus == 3){
+            //req ucmi
+            if(ucmi.isPortConnected){
+                ucmi.ReqPlayer(1);
+                ucmi.ReqPlayer(2);
+            }
+            
             Font startFont = new Font("Verdana", 1, 70);
             String startText1 = "PONG GAME";
             
@@ -260,6 +314,44 @@ public class Pong implements ActionListener, KeyListener{
         }
         if(s){
             player1.moveDn();
+        }
+        // ucmi version (both players)
+        if (ucmi.isPortConnected){
+            int val1 = ucmi.p[1].lasY;  //0 to 255
+            val1 = val1 - 127;
+            double percentage = val1;  //(val1/100)*100;      //i made maximum analog stick 100 (instead of 127)
+            if(percentage > 0){
+                if(percentage>100){
+                    percentage = 100;
+                }
+                player1.moveUp(percentage);
+            } else if (percentage < 0){
+                percentage = -percentage;
+                if(percentage>100){
+                    percentage = 100;
+                }
+                player1.moveDn(percentage);
+            }
+            
+            
+            //Player2
+            if(!bot){
+                int val2 = ucmi.p[2].lasY;
+                val2 = val2 - 127;
+                percentage = val2;  //(val1/100)*100;      //i made maximum analog stick 100 (instead of 127)
+                if(percentage > 0){
+                    if(percentage>100){
+                        percentage = 100;
+                    }
+                    player2.moveUp(percentage);
+                } else if (percentage < 0){
+                    percentage = -percentage;
+                    if(percentage>100){
+                        percentage = 100;
+                    }
+                    player2.moveDn(percentage);
+                }
+            }
         }
         //////
         if(!bot){   //human opponent
@@ -440,6 +532,7 @@ public class Pong implements ActionListener, KeyListener{
     @Override
     public void keyPressed(KeyEvent e) {
         int id = e.getKeyCode();
+        //System.out.println("pressed: "+e.getKeyText(id));
         
         if(id == KeyEvent.VK_W){
             w = true;
@@ -486,12 +579,12 @@ public class Pong implements ActionListener, KeyListener{
             up = false;
         } else if(id == KeyEvent.VK_DOWN){
             dn = false;
-        } else if(id == KeyEvent.VK_SHIFT){
+        } else if(id == KeyEvent.VK_SHIFT){//select
             if(gameStatus == 0){
                 bot = true;
                 selectingDifficulty = true;
             }
-        } else if(id == KeyEvent.VK_SPACE){
+        } else if(id == KeyEvent.VK_SPACE){//start
             if(gameStatus == 0){
                 if(!selectingDifficulty){
                     bot = false;
@@ -506,7 +599,7 @@ public class Pong implements ActionListener, KeyListener{
             } else if (gameStatus == 3){
                 start();
             }
-        } else if(id == KeyEvent.VK_ESCAPE){
+        } else if(id == KeyEvent.VK_ESCAPE){//quit
             if(gameStatus == 1 || gameStatus == 3){
                 gameStatus = 0;
                 selectingDifficulty = false;

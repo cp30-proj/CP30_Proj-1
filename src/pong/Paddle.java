@@ -112,7 +112,10 @@ public class Paddle {//actually player also i think
     }
     
     public void moveUp(double percentSpd){
-        int speed = (int)percentSpd/100*PADDLE_SPEED;
+        int speed = (int)(percentSpd/100*PADDLE_SPEED);
+        if(speed<0){
+            speed = 1;
+        }
         //oldy = y;
         
         if(y-speed <= 0){
@@ -123,7 +126,10 @@ public class Paddle {//actually player also i think
     }
     public void moveDn(double percentSpd){
         //oldy = y;
-        int speed = (int)percentSpd/100*PADDLE_SPEED;
+        int speed = (int)(percentSpd/100*PADDLE_SPEED);
+        if(speed<0){
+            speed = 1;
+        }
         
         if(y+HEIGHT+speed >= pong.height){
             y=pong.height-HEIGHT;
