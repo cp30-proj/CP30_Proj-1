@@ -11,10 +11,10 @@ public class PlayerState {
     //fields
     //int pNo = 0;
     int conType = 0;
-    int lasX = 0;   //left analog stick
-    int lasY = 0;
-    int rasX = 0;   //right analog stick
-    int rasY = 0;
+    int lasX = 128;   //left analog stick
+    int lasY = 128;     //128  <-- neutral position (0 to 255)
+    int rasX = 128;   //right analog stick
+    int rasY = 128;
     boolean fbA = false;
     boolean fbB = false;
     boolean fbX = false;
