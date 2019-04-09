@@ -19,14 +19,27 @@ import java.lang.reflect.Field;//optional,for toString shortcut
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
-import static pong.Pong.UART_HOLD_DOWN_WAIT_TIME;
+//import static Pong.UART_HOLD_DOWN_WAIT_TIME;
 /* @author Patrick Matthew J. Chan*/
 public class ControlConfig implements ActionListener,KeyListener{
     //fields
+    ////////////////////////-----C O N T R O L S--------/////////////////////     [[MUST declare all upon initialization from game!!]]
+    //first index = player no. |  second index = the "item"  [[all indices correspond to one another]]
+    String[][] gameControls; //in-game "name" of controls (general)
+    double[][] directionalGroupNo;   //say: {up,down,left,right,a,b}  would be {1.1, 1.2, 1.3, 1.4, 2, 3} //assumed .1=up .2=dn .3=lf .4=rt | .0=not directional
+    int[][] kybdControls;   //keyCodes for keyboard input
+    CM[][] uartControls;
+    static final int UART_HOLD_DOWN_WAIT_TIME = 50; 
+    int[][] uartHolddownWaitCount;   //timeout before computer reads button hold input as multiple presses
+        //^^ start as 0, counts up to wait time, stays there until released, in which it resets to 0.
+    boolean disableCMInput = false;
+    //////////////////////------------------------------/////////////////////
+    /////////////////////////////////////////////////////////////////////////
+    public UCMI ucmi;
     public static ControlConfig ctrlConfig;
     public JFrame jframe;
     public int width = 700, height = 700;
-    public Pong pong;
+    //public Pong pong;
     public ConfigRenderer renderer;
     //////////////////
     int screenNo = 0;   //0-splash Menu; 1-controller changing
@@ -52,9 +65,10 @@ public class ControlConfig implements ActionListener,KeyListener{
     
 
     //methods
-    public ControlConfig(Pong pong) {
-        this.pong = pong;
-        //this.ctrlConfig = pong.ctrlConfig;
+    public ControlConfig(UCMI ucmi) {
+        //this.pong = pong;
+        this.ucmi = ucmi;
+        this.ctrlConfig = this;
     }
     
     public void openSettings(int maxPlayers, int UpCtrlIdx, int DownCtrlIdx, int LeftCtrlIdx, int RightCtrlIdx, int EnterCtrlIdx){
@@ -93,7 +107,7 @@ public class ControlConfig implements ActionListener,KeyListener{
         //System.out.println("render: screenNo="+screenNo);
         
         if (screenNo == 1){
-            if(curControlsIdx < pong.gameControls[setupPNo].length){
+            if(curControlsIdx < gameControls[setupPNo].length){
                 Font TopFont = new Font("Courier", 1, 55);
                 String TopText1 = "~Controls Change~";
                 float TopFontX = width/2 - g.getFontMetrics(TopFont).stringWidth(TopText1)/2;
@@ -135,13 +149,26 @@ public class ControlConfig implements ActionListener,KeyListener{
 
                 Font MainFont = new Font("Courier",Font.PLAIN, 35);
                 String MainText1 = "Please press the new Assignment for:";
-                String MainText2 = "["+pong.gameControls[setupPNo][curControlsIdx]+"]";
+                String MainText2 = "["+gameControls[setupPNo][curControlsIdx]+"]";
                 ///
                 Font MiniFont = new Font("Courier",Font.PLAIN, 15);
-                    // vvv  CHANGE LATER ///////////////////////////////////////////////////////////////////////////////////////// << TODO !!
-                String MiniText1 = "[Move Analog Stick to assign this set of directions there.";
-                String MiniText2 = "...or, you may choose to individually assign each direction to a button.]";
-
+                String MiniText1;
+                String MiniText2;
+                double grpNo = directionalGroupNo[setupPNo][curControlsIdx];
+                double decPart = grpNo - (int)grpNo;
+                if(decPart > 0 && decPart <  0.2){
+                    //it is the "up" in a directional set
+                    MiniText1 = "[Move Analog Stick to assign this set of directions there.";
+                    MiniText2 = "...or, you may choose to individually assign each direction to buttons.]";
+                } else if (decPart >=0.2){
+                    //it is one of the other directions in a directional set
+                    MiniText1 = "[Note: Should be a PRESS-able button.";
+                    MiniText2 = "...since the \"Up\" button was not assigned to an analog stick direction.]";
+                } else {    //not part of directional groups
+                    MiniText1 = "[Note: Should be a PRESS-able button]";
+                    MiniText2 = "";
+                }
+                // // //
                 g.setColor(Color.WHITE);
                 g.setFont(MainFont);
                 g.drawString(MainText1, width/2 - g.getFontMetrics(MainFont).stringWidth(MainText1)/2, (int)(height/2 - g.getFontMetrics(MainFont).getAscent()/4));
@@ -168,19 +195,19 @@ public class ControlConfig implements ActionListener,KeyListener{
                         curShowKeyIters = 0;
                         ////////////
                         if(setupController == 0){   //keyboard
-                            pong.kybdControls[setupPNo][curControlsIdx] = curScreen1Code;
+                            kybdControls[setupPNo][curControlsIdx] = curScreen1Code;
                             curControlsIdx++;                        
                             ///
                             curScreen1Key = "";
                             curScreen1Code = -1;
                         } else if (setupController == 1){   //controller manager
-                            pong.uartControls[setupPNo][curControlsIdx] = curScreen1CM;
+                            uartControls[setupPNo][curControlsIdx] = curScreen1CM;
                             if(curScreen1CM.isAnalogAxis()){
-                                pong.uartControls[setupPNo][curControlsIdx+1] = curScreen1CM;
+                                uartControls[setupPNo][curControlsIdx+1] = curScreen1CM;
                                 ///
-                                if((int)(pong.directionalGroupNo[setupPNo][curControlsIdx+1]) == (int)(pong.directionalGroupNo[setupPNo][curControlsIdx+2])){
-                                    pong.uartControls[setupPNo][curControlsIdx+2] = curScreen1CM.getCorrespondingXorY();    //assumed not null
-                                    pong.uartControls[setupPNo][curControlsIdx+3] = curScreen1CM.getCorrespondingXorY();    //assumed not null
+                                if((int)(directionalGroupNo[setupPNo][curControlsIdx+1]) == (int)(directionalGroupNo[setupPNo][curControlsIdx+2])){
+                                    uartControls[setupPNo][curControlsIdx+2] = curScreen1CM.getCorrespondingXorY();    //assumed not null
+                                    uartControls[setupPNo][curControlsIdx+3] = curScreen1CM.getCorrespondingXorY();    //assumed not null
                                     ///
                                     curControlsIdx = curControlsIdx+4;
                                 } else {
@@ -230,7 +257,7 @@ public class ControlConfig implements ActionListener,KeyListener{
             MenuTexts[0] = "Read Controller Manager Input:";
                 //texts[1]
             StringBuilder temp = new StringBuilder();
-            if(pong.disableCMInput){
+            if(disableCMInput){
                 temp.append(" ENABLE    [DISABLE]");
             } else {
                 temp.append("[ENABLE]    DISABLE ");
@@ -242,7 +269,7 @@ public class ControlConfig implements ActionListener,KeyListener{
             MenuTexts[3] = "Player:  <<"+setupPNo+">>";
                 //texts[4]
             temp = new StringBuilder("Controller:  ");
-            if(pong.ucmi.isPortConnected && !pong.disableCMInput){
+            if(ucmi.isPortConnected && !disableCMInput){
                 temp.append("<<");
                 switch(setupController){
                     case 1:
@@ -295,167 +322,167 @@ public class ControlConfig implements ActionListener,KeyListener{
         //System.out.println("wee.");   //debug
         // READ UART Inputs
         if(screenNo == 0){
-            if (pong.ucmi.isPortConnected && !pong.disableCMInput){
+            if (ucmi.isPortConnected && !disableCMInput){
                 ////////------------ OTHER CONTROLS ["accidental" repeated press is  bad, so timeout applied]
                     //vvvv Remember: Controls indexing Starts with [0]; players indexing starts with [1].
                     //String[] genControlNames = new String[]{"Up","Down","Left","Right","Start","Select","Quit"}; <--from top-((as of 10:34 pc clk))]
                 for(int i=1;i<=maxPlayers;i++){
                     //any: left,  any: right     [may repeat press]
-                    if(pong.uartControls[i][LeftCtrlIdx].isAnalogAxis()){
-                        int val1 = pong.ucmi.p[i].readAnalogAxis(pong.uartControls[i][LeftCtrlIdx]);  //0 to 255
+                    if(uartControls[i][LeftCtrlIdx].isAnalogAxis()){
+                        int val1 = ucmi.p[i].readAnalogAxis(uartControls[i][LeftCtrlIdx]);  //0 to 255
                         val1 = val1 - 128;
                         //System.out.println("val1 = " + val1);
                         if(val1 > 64){
-                            switch (pong.uartHolddownWaitCount[i][RightCtrlIdx]){
+                            switch (uartHolddownWaitCount[i][RightCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actRightScr0();
                                     break;
                                 case 0:
                                     actRightScr0();
-                                    pong.uartHolddownWaitCount[i][RightCtrlIdx]++;
+                                    uartHolddownWaitCount[i][RightCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][RightCtrlIdx]++;
+                                    uartHolddownWaitCount[i][RightCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][RightCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][RightCtrlIdx]=0;}
                         /////
                         if (val1 < -64){
-                            switch (pong.uartHolddownWaitCount[i][LeftCtrlIdx]){
+                            switch (uartHolddownWaitCount[i][LeftCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actLeftScr0();
                                     break;
                                 case 0:
                                     actLeftScr0();
-                                    pong.uartHolddownWaitCount[i][LeftCtrlIdx]++;
+                                    uartHolddownWaitCount[i][LeftCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][LeftCtrlIdx]++;
+                                    uartHolddownWaitCount[i][LeftCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][LeftCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][LeftCtrlIdx]=0;}
                     } else {
-                        if(pong.ucmi.p[i].readButton(pong.uartControls[i][RightCtrlIdx])){
-                            switch (pong.uartHolddownWaitCount[i][RightCtrlIdx]){
+                        if(ucmi.p[i].readButton(uartControls[i][RightCtrlIdx])){
+                            switch (uartHolddownWaitCount[i][RightCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actRightScr0();
                                     break;
                                 case 0:
                                     actRightScr0();
-                                    pong.uartHolddownWaitCount[i][RightCtrlIdx]++;
+                                    uartHolddownWaitCount[i][RightCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][RightCtrlIdx]++;
+                                    uartHolddownWaitCount[i][RightCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][RightCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][RightCtrlIdx]=0;}
                         /////
-                        if(pong.ucmi.p[i].readButton(pong.uartControls[i][LeftCtrlIdx])){
-                            switch (pong.uartHolddownWaitCount[i][LeftCtrlIdx]){
+                        if(ucmi.p[i].readButton(uartControls[i][LeftCtrlIdx])){
+                            switch (uartHolddownWaitCount[i][LeftCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actLeftScr0();
                                     break;
                                 case 0:
                                     actLeftScr0();
-                                    pong.uartHolddownWaitCount[i][LeftCtrlIdx]++;
+                                    uartHolddownWaitCount[i][LeftCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][LeftCtrlIdx]++;
+                                    uartHolddownWaitCount[i][LeftCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][LeftCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][LeftCtrlIdx]=0;}
                     }
                     
                     
                     //any: up,  any: down     [may repeat press]
-                    if(pong.uartControls[i][UpCtrlIdx].isAnalogAxis()){
-                        int val1 = pong.ucmi.p[i].readAnalogAxis(pong.uartControls[i][UpCtrlIdx]);  //0 to 255
+                    if(uartControls[i][UpCtrlIdx].isAnalogAxis()){
+                        int val1 = ucmi.p[i].readAnalogAxis(uartControls[i][UpCtrlIdx]);  //0 to 255
                         val1 = val1 - 128;
                         //System.out.println("val1 = " + val1);
                         if(val1 > 64){
-                            switch (pong.uartHolddownWaitCount[i][UpCtrlIdx]){
+                            switch (uartHolddownWaitCount[i][UpCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actUpScr0();
                                     break;
                                 case 0:
                                     actUpScr0();
-                                    pong.uartHolddownWaitCount[i][UpCtrlIdx]++;
+                                    uartHolddownWaitCount[i][UpCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][UpCtrlIdx]++;
+                                    uartHolddownWaitCount[i][UpCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][UpCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][UpCtrlIdx]=0;}
                         /////
                         if (val1 < -64){
-                            switch (pong.uartHolddownWaitCount[i][DownCtrlIdx]){
+                            switch (uartHolddownWaitCount[i][DownCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actDownScr0();
                                     break;
                                 case 0:
                                     actDownScr0();
-                                    pong.uartHolddownWaitCount[i][DownCtrlIdx]++;
+                                    uartHolddownWaitCount[i][DownCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][DownCtrlIdx]++;
+                                    uartHolddownWaitCount[i][DownCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][DownCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][DownCtrlIdx]=0;}
                     } else {
-                        if(pong.ucmi.p[i].readButton(pong.uartControls[i][UpCtrlIdx])){
-                            switch (pong.uartHolddownWaitCount[i][UpCtrlIdx]){
+                        if(ucmi.p[i].readButton(uartControls[i][UpCtrlIdx])){
+                            switch (uartHolddownWaitCount[i][UpCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actUpScr0();
                                     break;
                                 case 0:
                                     actUpScr0();
-                                    pong.uartHolddownWaitCount[i][UpCtrlIdx]++;
+                                    uartHolddownWaitCount[i][UpCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][UpCtrlIdx]++;
+                                    uartHolddownWaitCount[i][UpCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][UpCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][UpCtrlIdx]=0;}
                         /////
-                        if(pong.ucmi.p[i].readButton(pong.uartControls[i][DownCtrlIdx])){
-                            switch (pong.uartHolddownWaitCount[i][DownCtrlIdx]){
+                        if(ucmi.p[i].readButton(uartControls[i][DownCtrlIdx])){
+                            switch (uartHolddownWaitCount[i][DownCtrlIdx]){
                                 case UART_HOLD_DOWN_WAIT_TIME:
                                     actDownScr0();
                                     break;
                                 case 0:
                                     actDownScr0();
-                                    pong.uartHolddownWaitCount[i][DownCtrlIdx]++;
+                                    uartHolddownWaitCount[i][DownCtrlIdx]++;
                                     break;
                                 default:
-                                    pong.uartHolddownWaitCount[i][DownCtrlIdx]++;
+                                    uartHolddownWaitCount[i][DownCtrlIdx]++;
                                     break;
                             }
-                        } else {pong.uartHolddownWaitCount[i][DownCtrlIdx]=0;}
+                        } else {uartHolddownWaitCount[i][DownCtrlIdx]=0;}
                     }
                     
                     
                     //any:  start   [NO repeat press on hold]
-                    //System.out.println("pong.uartControls[i][EnterCtrlIdx] = " + pong.uartControls[i][EnterCtrlIdx]);
-                    //System.out.println("pong.uartHolddownWaitCount[i][EnterCtrlIdx] = " + pong.uartHolddownWaitCount[i][EnterCtrlIdx]);
-                    if(pong.ucmi.p[i].readButton(pong.uartControls[i][EnterCtrlIdx])){
+                    //System.out.println("uartControls[i][EnterCtrlIdx] = " + uartControls[i][EnterCtrlIdx]);
+                    //System.out.println("uartHolddownWaitCount[i][EnterCtrlIdx] = " + uartHolddownWaitCount[i][EnterCtrlIdx]);
+                    if(ucmi.p[i].readButton(uartControls[i][EnterCtrlIdx])){
                         /// [SPECIAL CASE]  (since executing this stops loop from executnig this block.)
-                        for (int j = 0; j < pong.uartHolddownWaitCount.length; j++) {
-                            for (int k = 0; k < pong.uartHolddownWaitCount[j].length; k++) {
-                                pong.uartHolddownWaitCount[j][k] = 0;
+                        for (int j = 0; j < uartHolddownWaitCount.length; j++) {
+                            for (int k = 0; k < uartHolddownWaitCount[j].length; k++) {
+                                uartHolddownWaitCount[j][k] = 0;
                             }
                         }
                         // what it executes
                         actEnterScr0();
                         //in next iteration, code goes thru screenNo = 1 block instead
-                    } else {pong.uartHolddownWaitCount[i][EnterCtrlIdx]=0;}
+                    } else {uartHolddownWaitCount[i][EnterCtrlIdx]=0;}
                 }
             }
         } else if (screenNo == 1 && setupController == 1 && curScreen1Key.length() == 0){
-            newP = pong.ucmi.p[setupPNo].copy();    //we need to COPY (deep), otherwise, only the pointer gets copied, no data is stored.
+            newP = ucmi.p[setupPNo].copy();    //we need to COPY (deep), otherwise, only the pointer gets copied, no data is stored.
             //for the case of analog sticks
             CM tempKey = PlayerState.readStickChange(oldP, newP);
             if(tempKey != null){
-                double grpNo = pong.directionalGroupNo[setupPNo][curControlsIdx];
+                double grpNo = directionalGroupNo[setupPNo][curControlsIdx];
                 double decPart = grpNo - (int)grpNo;
                 if(decPart > 0 && decPart <  0.2){
                     //it is the "up" in a directional set
@@ -504,7 +531,7 @@ public class ControlConfig implements ActionListener,KeyListener{
         //if(screenNo == 0){
         switch(splashOptionNo){
             case 0:
-                pong.disableCMInput = !pong.disableCMInput;
+                disableCMInput = !disableCMInput;
                 break;
 
             case 1:
@@ -527,7 +554,7 @@ public class ControlConfig implements ActionListener,KeyListener{
         //if(screenNo == 0){
         switch(splashOptionNo){
             case 0:
-                pong.disableCMInput = !pong.disableCMInput;
+                disableCMInput = !disableCMInput;
                 break;
 
             case 1:
@@ -553,11 +580,11 @@ public class ControlConfig implements ActionListener,KeyListener{
             curShowKeyIters = 0;
             curControlsIdx = 0;
             curScreen1Key = "";
-            if(setupController == 1  && (!pong.ucmi.isPortConnected || pong.disableCMInput)){
+            if(setupController == 1  && (!ucmi.isPortConnected || disableCMInput)){
                 setupController = 0;
             } else {
                 //setupController = 1  (understood)
-                oldP = pong.ucmi.p[setupPNo].copy();
+                oldP = ucmi.p[setupPNo].copy();
             }
         }
         System.out.println("screenNo = " + screenNo);
@@ -610,23 +637,23 @@ public class ControlConfig implements ActionListener,KeyListener{
             boolean isFound = false;
             
             for(int i=1; !isFound && i<=maxPlayers; i++){       //player indexing starts at 1
-                if(id == pong.kybdControls[i][UpCtrlIdx]){//any up
+                if(id == kybdControls[i][UpCtrlIdx]){//any up
                     actUpScr0();
                     isFound = true;
                 }
-                if(id == pong.kybdControls[i][DownCtrlIdx]){//any down
+                if(id == kybdControls[i][DownCtrlIdx]){//any down
                     actDownScr0();
                     isFound = true;
                 }
-                if(id == pong.kybdControls[i][LeftCtrlIdx]){//any left
+                if(id == kybdControls[i][LeftCtrlIdx]){//any left
                     actLeftScr0();
                     isFound = true;
                 }
-                if(id == pong.kybdControls[i][RightCtrlIdx]){//any right
+                if(id == kybdControls[i][RightCtrlIdx]){//any right
                     actRightScr0();
                     isFound = true;
                 } 
-                if(id == pong.kybdControls[i][EnterCtrlIdx]){//any enter
+                if(id == kybdControls[i][EnterCtrlIdx]){//any enter
                     actEnterScr0();
                     isFound = true;
                 } 

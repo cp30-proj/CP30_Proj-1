@@ -29,18 +29,8 @@ import javax.swing.Timer;
 public class Pong implements ActionListener, KeyListener{
 
     UCMI ucmi = new UCMI();
-    ControlConfig ctrlConfig = new ControlConfig(this);
-    ////////////////////////-----C O N T R O L S--------/////////////////////
-    //first index = player no. |  second index = the "item"  [[all indices correspond to one another]]
-    String[][] gameControls; //in-game "name" of controls (general)
-    double[][] directionalGroupNo;   //say: {up,down,left,right,a,b}  would be {1.1, 1.2, 1.3, 1.4, 2, 3} //assumed .1=up .2=dn .3=lf .4=rt | .0=not directional
-    int[][] kybdControls;   //keyCodes for keyboard input
-    CM[][] uartControls;
-    static final int UART_HOLD_DOWN_WAIT_TIME = 50; 
-    int[][] uartHolddownWaitCount;   //timeout before computer reads button hold input as multiple presses
-        //^^ start as 0, counts up to wait time, stays there until released, in which it resets to 0.
-    boolean disableCMInput = false;
-    //////////////////////------------------------------/////////////////////
+    ControlConfig ctrlConfig;
+    
     
     public boolean w,s,up,dn;       //better simultaneous key handling
     public boolean bot = false;     //true if vs. computer.
@@ -73,34 +63,39 @@ public class Pong implements ActionListener, KeyListener{
             ucmi.ReqPlayer(2);
             System.out.println("port connected. 1st requests sent.");
         }
+        ////////////////////////////////
+        /// defining controls (default)
+        ///////////////////////////////
+        ctrlConfig = new ControlConfig(ucmi);
+        ///////
         String[] genControlNames = new String[]{"Up","Down","Left","Right","Start","Select","Quit"}; //please insrt new controls at end, unless wiling to change indexing in code.
         double[]  genDirGrpNo = new double[]{1.1,1.2,1.3,1.4,2,3,4};
         ///////
-        gameControls = new String[3][]; //player indexing starts at '1'
-        for (int i = 1; i < gameControls.length; i++) {
-            gameControls[i] =  genControlNames;
+        ctrlConfig.gameControls = new String[3][]; //player indexing starts at '1'
+        for (int i = 1; i < ctrlConfig.gameControls.length; i++) {
+            ctrlConfig.gameControls[i] =  genControlNames;
         }
         ////////
-        directionalGroupNo = new double[3][]; //player indexing starts at '1'
-        for (int i = 1; i < directionalGroupNo.length; i++) {
-            directionalGroupNo[i] = genDirGrpNo;
+        ctrlConfig.directionalGroupNo = new double[3][]; //player indexing starts at '1'
+        for (int i = 1; i < ctrlConfig.directionalGroupNo.length; i++) {
+            ctrlConfig.directionalGroupNo[i] = genDirGrpNo;
         }
         ////////
-        kybdControls = new int[3][]; //player indexing starts at '1'
-        kybdControls[1] = new int[]{KeyEvent.VK_W,KeyEvent.VK_S,KeyEvent.VK_A,KeyEvent.VK_D,KeyEvent.VK_SPACE,KeyEvent.VK_SHIFT,KeyEvent.VK_ESCAPE};    //P1 default
-        kybdControls[2] = new int[]{KeyEvent.VK_UP,KeyEvent.VK_DOWN,KeyEvent.VK_LEFT,KeyEvent.VK_RIGHT,KeyEvent.VK_SPACE,KeyEvent.VK_SHIFT,KeyEvent.VK_ESCAPE};    //P2 default
+        ctrlConfig.kybdControls = new int[3][]; //player indexing starts at '1'
+        ctrlConfig.kybdControls[1] = new int[]{KeyEvent.VK_W,KeyEvent.VK_S,KeyEvent.VK_A,KeyEvent.VK_D,KeyEvent.VK_SPACE,KeyEvent.VK_SHIFT,KeyEvent.VK_ESCAPE};    //P1 default
+        ctrlConfig.kybdControls[2] = new int[]{KeyEvent.VK_UP,KeyEvent.VK_DOWN,KeyEvent.VK_LEFT,KeyEvent.VK_RIGHT,KeyEvent.VK_SPACE,KeyEvent.VK_SHIFT,KeyEvent.VK_ESCAPE};    //P2 default
         ////////
-        uartControls = new CM[3][]; //player indexing starts at '1'
+        ctrlConfig.uartControls = new CM[3][]; //player indexing starts at '1'
         CM[] genUart = new CM[]{CM.LEFT_ANALOG_STICK_Y,CM.LEFT_ANALOG_STICK_Y,CM.LEFT_ANALOG_STICK_X,CM.LEFT_ANALOG_STICK_X,CM.A_FACE_BUTTON,
             CM.SELECT_BUTTON,CM.B_FACE_BUTTON};
-        for (int i = 1; i < uartControls.length; i++) {
-            uartControls[i] = genUart;
+        for (int i = 1; i < ctrlConfig.uartControls.length; i++) {
+            ctrlConfig.uartControls[i] = genUart;
         }
         ////////
-        uartHolddownWaitCount = new int[gameControls.length][gameControls[1].length];
-        for (int i = 1; i < uartHolddownWaitCount.length; i++) {
-            for (int j = 0; j < uartHolddownWaitCount[i].length; j++) {
-                uartHolddownWaitCount[i][j] = 0;
+        ctrlConfig.uartHolddownWaitCount = new int[ctrlConfig.gameControls.length][ctrlConfig.gameControls[1].length];
+        for (int i = 1; i < ctrlConfig.uartHolddownWaitCount.length; i++) {
+            for (int j = 0; j < ctrlConfig.uartHolddownWaitCount[i].length; j++) {
+                ctrlConfig.uartHolddownWaitCount[i][j] = 0;
             }
         }
         
@@ -142,7 +137,7 @@ public class Pong implements ActionListener, KeyListener{
         
         if(gameStatus == 1 || gameStatus == 2){ //graphics during game play
             //req ucmi
-            if(ucmi.isPortConnected && !disableCMInput){
+            if(ucmi.isPortConnected && !ctrlConfig.disableCMInput){
                 ucmi.ReqPlayer(1);
                 if(!bot){
                     ucmi.ReqPlayer(2);
@@ -178,7 +173,7 @@ public class Pong implements ActionListener, KeyListener{
         ////////  "PONG"  text
         if(gameStatus == 0 || gameStatus == 3){
             //req ucmi
-            if(ucmi.isPortConnected && !disableCMInput){
+            if(ucmi.isPortConnected && !ctrlConfig.disableCMInput){
                 ucmi.ReqPlayer(1);
                 ucmi.ReqPlayer(2);
             }
@@ -199,7 +194,7 @@ public class Pong implements ActionListener, KeyListener{
         //WELCOME and PAUSE screens/overlay
         if(gameStatus == 0){
             Font startFont2 = new Font("Verdana", 1, 15);
-            String startText2 = "=(Press "+gameControls[1][4]+" Key to play)=";
+            String startText2 = "=(Press "+ctrlConfig.gameControls[1][4]+" Key to play)=";
 
             g.setColor(Color.WHITE);
             g.setFont(startFont2);
@@ -209,7 +204,7 @@ public class Pong implements ActionListener, KeyListener{
             
             if(!selectingDifficulty){
                 Font startFont3a = new Font("Verdana", 1, 13);
-                String startText3 = "[Press "+gameControls[1][5]+" Key:   vs. BOT]";
+                String startText3 = "[Press "+ctrlConfig.gameControls[1][5]+" Key:   vs. BOT]";
 
                 g.setColor(Color.WHITE);
                 g.setFont(startFont3a);
@@ -262,7 +257,7 @@ public class Pong implements ActionListener, KeyListener{
                 
                 
                 Font startFont5 = new Font("Verdana", 1, 13);                
-                String addedText = "[Press "+gameControls[1][6]+" Key:   Control Settings]";
+                String addedText = "[Press "+ctrlConfig.gameControls[1][6]+" Key:   Control Settings]";
                 g.setColor(Color.WHITE);
                 g.setFont(startFont5);
                 g.drawString(addedText, width/2 - g.getFontMetrics(startFont5).stringWidth(addedText)/2, height/2 + g.getFontMetrics(startFont5).getAscent()*5);
@@ -283,7 +278,7 @@ public class Pong implements ActionListener, KeyListener{
             
             
             Font pausedFont2 = new Font("Verdana", 1, 15);
-            String startText2 = "[Press "+gameControls[1][4]+" Key to Resume]";
+            String startText2 = "[Press "+ctrlConfig.gameControls[1][4]+" Key to Resume]";
             
             g.setColor(Color.WHITE);
             g.setFont(pausedFont2);
@@ -292,7 +287,7 @@ public class Pong implements ActionListener, KeyListener{
             
             
             Font pausedFont3 = new Font("Verdana", 1, 15);
-            String startText3 = "[Press "+gameControls[1][6]+" Key for Title Screen]";
+            String startText3 = "[Press "+ctrlConfig.gameControls[1][6]+" Key for Title Screen]";
             
             g.setColor(Color.WHITE);
             g.setFont(pausedFont3);
@@ -313,8 +308,8 @@ public class Pong implements ActionListener, KeyListener{
             
             
             Font gOverFont2 = new Font("Verdana", 1, 20);
-            String gOverText2a = "["+gameControls[1][4]+" Key to Play Again]";
-            String gOverText2b = "["+gameControls[1][6]+" Key for Title Screen]";
+            String gOverText2a = "["+ctrlConfig.gameControls[1][4]+" Key to Play Again]";
+            String gOverText2b = "["+ctrlConfig.gameControls[1][6]+" Key for Title Screen]";
             
             g.setColor(Color.WHITE);
             g.setFont(gOverFont2);
@@ -327,125 +322,125 @@ public class Pong implements ActionListener, KeyListener{
         /////////////////////////////////////////////////////////////////////////
         //System.out.println("wee.");   //debug
         //uart controls (NON-PADDLE)
-        if (ucmi.isPortConnected && !disableCMInput){
+        if (ucmi.isPortConnected && !ctrlConfig.disableCMInput){
             ////////------------ OTHER CONTROLS ["accidental" repeated press is  bad, so timeout applied]
                 //vvvv Remember: Controls indexing Starts with [0]; players indexing starts with [1].
                 //String[] genControlNames = new String[]{"Up","Down","Left","Right","Start","Select","Quit"}; <--from top-((as of 10:34 pc clk))]
             for(int i=1;i<=2;i++){
                 //any: left,  any: right     [may repeat press]
-                if(uartControls[i][2].isAnalogAxis()){
-                    int val1 = ucmi.p[i].readAnalogAxis(uartControls[i][2]);  //0 to 255
+                if(ctrlConfig.uartControls[i][2].isAnalogAxis()){
+                    int val1 = ucmi.p[i].readAnalogAxis(ctrlConfig.uartControls[i][2]);  //0 to 255
                     val1 = val1 - 128;
                     //System.out.println("val1 = " + val1);
                     if(val1 > 64){
-                        switch (uartHolddownWaitCount[i][3]){
-                            case UART_HOLD_DOWN_WAIT_TIME:
+                        switch (ctrlConfig.uartHolddownWaitCount[i][3]){
+                            case ControlConfig.UART_HOLD_DOWN_WAIT_TIME:
                                 actRight();
                                 break;
                             case 0:
                                 actRight();
-                                uartHolddownWaitCount[i][3]++;
+                                ctrlConfig.uartHolddownWaitCount[i][3]++;
                                 break;
                             default:
-                                uartHolddownWaitCount[i][3]++;
+                                ctrlConfig.uartHolddownWaitCount[i][3]++;
                                 break;
                         }
-                    } else {uartHolddownWaitCount[i][3]=0;}
+                    } else {ctrlConfig.uartHolddownWaitCount[i][3]=0;}
                     /////
                     if (val1 < -64){
-                        switch (uartHolddownWaitCount[i][2]){
-                            case UART_HOLD_DOWN_WAIT_TIME:
+                        switch (ctrlConfig.uartHolddownWaitCount[i][2]){
+                            case ControlConfig.UART_HOLD_DOWN_WAIT_TIME:
                                 actLeft();
                                 break;
                             case 0:
                                 actLeft();
-                                uartHolddownWaitCount[i][2]++;
+                                ctrlConfig.uartHolddownWaitCount[i][2]++;
                                 break;
                             default:
-                                uartHolddownWaitCount[i][2]++;
+                                ctrlConfig.uartHolddownWaitCount[i][2]++;
                                 break;
                         }
-                    } else {uartHolddownWaitCount[i][2]=0;}
+                    } else {ctrlConfig.uartHolddownWaitCount[i][2]=0;}
                 } else {
-                    if(ucmi.p[i].readButton(uartControls[i][3])){
-                        switch (uartHolddownWaitCount[i][3]){
-                            case UART_HOLD_DOWN_WAIT_TIME:
+                    if(ucmi.p[i].readButton(ctrlConfig.uartControls[i][3])){
+                        switch (ctrlConfig.uartHolddownWaitCount[i][3]){
+                            case ControlConfig.UART_HOLD_DOWN_WAIT_TIME:
                                 actRight();
                                 break;
                             case 0:
                                 actRight();
-                                uartHolddownWaitCount[i][3]++;
+                                ctrlConfig.uartHolddownWaitCount[i][3]++;
                                 break;
                             default:
-                                uartHolddownWaitCount[i][3]++;
+                                ctrlConfig.uartHolddownWaitCount[i][3]++;
                                 break;
                         }
-                    } else {uartHolddownWaitCount[i][3]=0;}
+                    } else {ctrlConfig.uartHolddownWaitCount[i][3]=0;}
                     /////
-                    if(ucmi.p[i].readButton(uartControls[i][2])){
-                        switch (uartHolddownWaitCount[i][2]){
-                            case UART_HOLD_DOWN_WAIT_TIME:
+                    if(ucmi.p[i].readButton(ctrlConfig.uartControls[i][2])){
+                        switch (ctrlConfig.uartHolddownWaitCount[i][2]){
+                            case ControlConfig.UART_HOLD_DOWN_WAIT_TIME:
                                 actLeft();
                                 break;
                             case 0:
                                 actLeft();
-                                uartHolddownWaitCount[i][2]++;
+                                ctrlConfig.uartHolddownWaitCount[i][2]++;
                                 break;
                             default:
-                                uartHolddownWaitCount[i][2]++;
+                                ctrlConfig.uartHolddownWaitCount[i][2]++;
                                 break;
                         }
-                    } else {uartHolddownWaitCount[i][2]=0;}
+                    } else {ctrlConfig.uartHolddownWaitCount[i][2]=0;}
                 }
                 
                 
                 //any:  start   [NO repeat press on hold]
-                if(ucmi.p[i].readButton(uartControls[i][4])){
-                    switch (uartHolddownWaitCount[i][4]){
-                        case UART_HOLD_DOWN_WAIT_TIME:
+                if(ucmi.p[i].readButton(ctrlConfig.uartControls[i][4])){
+                    switch (ctrlConfig.uartHolddownWaitCount[i][4]){
+                        case ControlConfig.UART_HOLD_DOWN_WAIT_TIME:
                             //actStart();   [NO repeat press on hold]
                             break;
                         case 0:
                             actStart();
-                            uartHolddownWaitCount[i][4]++;
+                            ctrlConfig.uartHolddownWaitCount[i][4]++;
                             break;
                         default:
-                            uartHolddownWaitCount[i][4]++;
+                            ctrlConfig.uartHolddownWaitCount[i][4]++;
                             break;
                     }
-                } else {uartHolddownWaitCount[i][4]=0;}
+                } else {ctrlConfig.uartHolddownWaitCount[i][4]=0;}
                 
                 //any: select   [NO repeat press on hold]
-                if(ucmi.p[i].readButton(uartControls[i][5])){
-                    switch (uartHolddownWaitCount[i][5]){
-                        case UART_HOLD_DOWN_WAIT_TIME:
+                if(ucmi.p[i].readButton(ctrlConfig.uartControls[i][5])){
+                    switch (ctrlConfig.uartHolddownWaitCount[i][5]){
+                        case ControlConfig.UART_HOLD_DOWN_WAIT_TIME:
                             //actSelect();   [NO repeat press on hold]
                             break;
                         case 0:
                             actSelect();
-                            uartHolddownWaitCount[i][5]++;
+                            ctrlConfig.uartHolddownWaitCount[i][5]++;
                             break;
                         default:
-                            uartHolddownWaitCount[i][5]++;
+                            ctrlConfig.uartHolddownWaitCount[i][5]++;
                             break;
                     }
-                } else {uartHolddownWaitCount[i][5]=0;}
+                } else {ctrlConfig.uartHolddownWaitCount[i][5]=0;}
                 
                 //any: quit   [NO repeat press on hold]
-                if(ucmi.p[i].readButton(uartControls[i][6])){
-                    switch (uartHolddownWaitCount[i][6]){
-                        case UART_HOLD_DOWN_WAIT_TIME:
+                if(ucmi.p[i].readButton(ctrlConfig.uartControls[i][6])){
+                    switch (ctrlConfig.uartHolddownWaitCount[i][6]){
+                        case ControlConfig.UART_HOLD_DOWN_WAIT_TIME:
                             //actQuit();   [NO repeat press on hold]
                             break;
                         case 0:
                             actQuit();
-                            uartHolddownWaitCount[i][6]++;
+                            ctrlConfig.uartHolddownWaitCount[i][6]++;
                             break;
                         default:
-                            uartHolddownWaitCount[i][6]++;
+                            ctrlConfig.uartHolddownWaitCount[i][6]++;
                             break;
                     }
-                } else {uartHolddownWaitCount[i][6]=0;}
+                } else {ctrlConfig.uartHolddownWaitCount[i][6]=0;}
                 
             }
         }
@@ -550,11 +545,11 @@ public class Pong implements ActionListener, KeyListener{
         }
         //uart controls (PADDLE only)
         // ucmi version (both players)
-        if (ucmi.isPortConnected && !disableCMInput){/////////////////BUG (seems like it)
+        if (ucmi.isPortConnected && !ctrlConfig.disableCMInput){/////////////////BUG (seems like it)
             //---- [0],[1]    PADDLE CONTROLS
             //paddle control ("UP" and "DOWN") ==> index [0] and [1]
-            if(uartControls[1][0].isAnalogAxis()){
-                int val1 = ucmi.p[1].readAnalogAxis(uartControls[1][0]);  //0 to 255
+            if(ctrlConfig.uartControls[1][0].isAnalogAxis()){
+                int val1 = ucmi.p[1].readAnalogAxis(ctrlConfig.uartControls[1][0]);  //0 to 255
                 val1 = val1 - 128;
                 double percentage = val1;  //(val1/100)*100;      //i made maximum analog stick 100 (instead of 127)
                 if(percentage > 0){
@@ -570,10 +565,10 @@ public class Pong implements ActionListener, KeyListener{
                     player1.moveDn(percentage);
                 }
             } else {
-                if(ucmi.p[1].readButton(uartControls[1][0])){
+                if(ucmi.p[1].readButton(ctrlConfig.uartControls[1][0])){
                     player1.moveUp();
                 }
-                if(ucmi.p[1].readButton(uartControls[1][1])){
+                if(ucmi.p[1].readButton(ctrlConfig.uartControls[1][1])){
                     player1.moveDn();
                 }
                 
@@ -581,8 +576,8 @@ public class Pong implements ActionListener, KeyListener{
             
             //Player2
             if(!bot){
-                if(uartControls[2][0].isAnalogAxis()){
-                    int val2 = ucmi.p[2].readAnalogAxis(uartControls[2][0]);  //0 to 255
+                if(ctrlConfig.uartControls[2][0].isAnalogAxis()){
+                    int val2 = ucmi.p[2].readAnalogAxis(ctrlConfig.uartControls[2][0]);  //0 to 255
                     val2 = val2 - 128;
                     double percentage = val2;  //(val1/100)*100;      //i made maximum analog stick 100 (instead of 127)
                     if(percentage > 0){
@@ -598,10 +593,10 @@ public class Pong implements ActionListener, KeyListener{
                         player2.moveDn(percentage);
                     }
                 } else {
-                    if(ucmi.p[2].readButton(uartControls[2][0])){
+                    if(ucmi.p[2].readButton(ctrlConfig.uartControls[2][0])){
                         player2.moveUp();
                     }
-                    if(ucmi.p[2].readButton(uartControls[2][1])){
+                    if(ucmi.p[2].readButton(ctrlConfig.uartControls[2][1])){
                         player2.moveDn();
                     }
                 }
@@ -799,25 +794,25 @@ public class Pong implements ActionListener, KeyListener{
         int id = e.getKeyCode();
         //System.out.println("id = " + id);
         //System.out.println("pressed: "+e.getKeyText(id));
-        //System.out.println("kybdCtrls[1]:"+Arrays.toString(kybdControls[1]));
-        //System.out.println("kybdCtrls[2]:"+Arrays.toString(kybdControls[2]));
+        //System.out.println("kybdCtrls[1]:"+Arrays.toString(ctrlConfig.kybdControls[1]));
+        //System.out.println("kybdCtrls[2]:"+Arrays.toString(ctrlConfig.kybdControls[2]));
         
-        if(id == kybdControls[1][0]){//p1 up
+        if(id == ctrlConfig.kybdControls[1][0]){//p1 up
             w = true;
         }
-        if(id == kybdControls[1][1]){//p1 down
+        if(id == ctrlConfig.kybdControls[1][1]){//p1 down
             s = true;
         }
-        if(id == kybdControls[2][0]){//p2 up
+        if(id == ctrlConfig.kybdControls[2][0]){//p2 up
             up = true;
         }
-        if(id == kybdControls[2][1]){//p2 down
+        if(id == ctrlConfig.kybdControls[2][1]){//p2 down
             dn = true;
         }
-        if(id == kybdControls[1][2] || id == kybdControls[2][2]){//any left
+        if(id == ctrlConfig.kybdControls[1][2] || id == ctrlConfig.kybdControls[2][2]){//any left
             actLeft();
         }
-        if(id == kybdControls[1][3] || id == kybdControls[2][3]){//any right
+        if(id == ctrlConfig.kybdControls[1][3] || id == ctrlConfig.kybdControls[2][3]){//any right
             actRight();
         } 
     }
@@ -829,25 +824,25 @@ public class Pong implements ActionListener, KeyListener{
         //String[] genControlNames = new String[]{"Up","Down","Left","Right","Start","Select","Quit"}; <--from top-((as of 10:34 pc clk))]
         int id = e.getKeyCode();
         
-        if(id == kybdControls[1][0]){//p1 up
+        if(id == ctrlConfig.kybdControls[1][0]){//p1 up
             w = false;
         } 
-        if(id == kybdControls[1][1]){//p1 dn
+        if(id == ctrlConfig.kybdControls[1][1]){//p1 dn
             s = false;
         } 
-        if(id == kybdControls[2][0]){//p2 up
+        if(id == ctrlConfig.kybdControls[2][0]){//p2 up
             up = false;
         } 
-        if(id == kybdControls[2][1]){//p2 dn
+        if(id == ctrlConfig.kybdControls[2][1]){//p2 dn
             dn = false;
         } 
-        if(id == kybdControls[1][5]  ||  id == kybdControls[2][5]){//any select
+        if(id == ctrlConfig.kybdControls[1][5]  ||  id == ctrlConfig.kybdControls[2][5]){//any select
             actSelect();
         } 
-        if(id == kybdControls[1][4]  ||  id == kybdControls[2][4]){//any start
+        if(id == ctrlConfig.kybdControls[1][4]  ||  id == ctrlConfig.kybdControls[2][4]){//any start
             actStart();
         } 
-        if(id == kybdControls[1][6]  ||  id == kybdControls[2][6]){//any Quit
+        if(id == ctrlConfig.kybdControls[1][6]  ||  id == ctrlConfig.kybdControls[2][6]){//any Quit
             actQuit();
         }
     }

@@ -18,7 +18,7 @@ public class ConfigRenderer extends JPanel{
     protected void paintComponent(Graphics g) {
         super.paintComponent(g); //To change body of generated methods, choose Tools | Templates.
         
-        Pong.pong.ctrlConfig.render((Graphics2D) g);  //*only because  Graphics in Java is Graphics2D in default (extend)
+        ControlConfig.ctrlConfig.render((Graphics2D) g);  //*only because  Graphics in Java is Graphics2D in default (extend)
     }
     
     
