@@ -34,9 +34,13 @@ public enum CM {    //Controller Manager List of Keys
     
     private boolean isAD;
     private String keyName;
-    CM(boolean isAnalogDirection,String keyName){
+    //private CM correspondingXorY;
+    
+    
+    CM(boolean isAnalogDirection, String keyName){
         this.isAD = isAnalogDirection;
         this.keyName = keyName;
+        //this.correspondingXorY = correspondingXorY;
     }
     
     boolean isAnalogAxis(){
@@ -45,5 +49,24 @@ public enum CM {    //Controller Manager List of Keys
     
     String getName(){
         return keyName;
+    }
+    
+    CM getCorrespondingXorY(){
+        switch(this){
+            case LEFT_ANALOG_STICK_X:
+                return LEFT_ANALOG_STICK_Y;
+                
+            case LEFT_ANALOG_STICK_Y:
+                return LEFT_ANALOG_STICK_X;
+                
+            case RIGHT_ANALOG_STICK_X:
+                return RIGHT_ANALOG_STICK_Y;
+                
+            case RIGHT_ANALOG_STICK_Y:
+                return RIGHT_ANALOG_STICK_X;
+                
+            default:
+                return null;
+        }
     }
 }

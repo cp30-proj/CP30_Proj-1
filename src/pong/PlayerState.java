@@ -34,7 +34,7 @@ public class PlayerState {
 
     
     //methods
-    public int readAsUnsignedByte(byte input){
+    public static int readAsUnsignedByte(byte input){
         if(input<0){
             return input + 256;
         } else {
@@ -42,15 +42,15 @@ public class PlayerState {
         }
     }
     
-    public int getBit(byte input,int position){ //LSB is posn 0
+    public static int getBit(byte input,int position){ //LSB is posn 0
        return (input >> position) & 1;
     }
     
-    boolean boolFrBit(int input){   //1/0 to true/false  [logic similar to C]
+    static boolean boolFrBit(int input){   //1/0 to true/false  [logic similar to C]
         return input!=0;
     }
     
-    boolean boolFrByte(byte input,int position){   //1/0 to true/false  [logic similar to C]
+    static boolean boolFrByte(byte input,int position){   //1/0 to true/false  [logic similar to C]
         return boolFrBit(getBit(input,position));
     }
     
@@ -211,6 +211,76 @@ public class PlayerState {
                 return 127;
         }
     }
+    
+    static CM readStickChange(PlayerState oldP, PlayerState newP){
+        //System.out.println("readStickChange:");
+        //System.out.println("oldP = " + oldP);
+        //System.out.println("newP = " + newP);
+        //System.out.println("--------------------------");
+        //System.out.println("--------------------------");
+        if(oldP.lasX != newP.lasX){
+            return CM.LEFT_ANALOG_STICK_X;
+        } else if(oldP.lasY != newP.lasY){
+            return CM.LEFT_ANALOG_STICK_Y;
+        } else if(oldP.rasX != newP.rasX){
+            return CM.RIGHT_ANALOG_STICK_X;
+        } else if(oldP.rasY != newP.rasY){
+            return CM.RIGHT_ANALOG_STICK_Y;
+        } else {
+            return null;
+        }
+    }
+    
+    static CM readBtnPressed(PlayerState oldP, PlayerState newP){
+        //System.out.println("readBtnPressed:");
+        //System.out.println("oldP = " + oldP);
+        //System.out.println("newP = " + newP);
+        //System.out.println("--------------------------");
+        //System.out.println("--------------------------");
+        for (CM key : CM.values()) {
+            switch(key){
+                case  LEFT_ANALOG_STICK_X:
+                case  LEFT_ANALOG_STICK_Y:
+                case  RIGHT_ANALOG_STICK_X:
+                case  RIGHT_ANALOG_STICK_Y:
+                    break;  //break switch (NOT for each)
+                default:
+                    if(newP.readButton(key) && !oldP.readButton(key)){
+                        return key;
+                    }
+                    break;
+            }
+        }
+        return null;
+    }
+    
+    
+    public PlayerState copy(){
+        PlayerState out = new PlayerState();
+        out.conType             = this.conType; 	
+        out.lasX 		= this.lasX; 		   //left analog stick
+        out.lasY 		= this.lasY; 		        //value from 0 to 255.
+        out.rasX 		= this.rasX; 		   //right analog stick
+        out.rasY 		= this.rasY; 		
+        out.fbA 		= this.fbA; 		
+        out.fbB 		= this.fbB; 		
+        out.fbX 		= this.fbX; 		
+        out.fbY 		= this.fbY; 		
+        out.dpD 		= this.dpD; 		
+        out.dpR 		= this.dpR; 		
+        out.dpL 		= this.dpL; 		
+        out.dpU 		= this.dpU; 		
+        out.btnStart            = this.btnStart; 	
+        out.btnSelect           = this.btnSelect; 
+        out.stickL 		= this.stickL; 	
+        out.stickR 		= this.stickR; 	
+        out.shL 		= this.shL; 		//shoulder button
+        out.shR 		= this.shR; 		
+        out.trigL 		= this.trigL; 	  //trigger button
+        out.trigR 		= this.trigR;
+        /////
+        return out;
+    } 
     
     
     // <editor-fold defaultstate="collapsed" desc="toString shortcut">

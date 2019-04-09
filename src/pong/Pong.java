@@ -29,6 +29,7 @@ import javax.swing.Timer;
 public class Pong implements ActionListener, KeyListener{
 
     UCMI ucmi = new UCMI();
+    ControlConfig ctrlConfig = new ControlConfig(this);
     ////////////////////////-----C O N T R O L S--------/////////////////////
     //first index = player no. |  second index = the "item"  [[all indices correspond to one another]]
     String[][] gameControls; //in-game "name" of controls (general)
@@ -104,8 +105,6 @@ public class Pong implements ActionListener, KeyListener{
         }
         
         
-        
-        
         //timer
         Timer timer = new Timer(20, this);
         
@@ -119,6 +118,9 @@ public class Pong implements ActionListener, KeyListener{
         jframe.addKeyListener(this);
         
         timer.start();
+        
+        //test
+        //ctrlConfig.openSettings();
     }
     
     public void start(){
@@ -132,6 +134,7 @@ public class Pong implements ActionListener, KeyListener{
     }
     
     public void render(Graphics2D g){         //(Graphics2D, in order to be able to set Stroke)
+        //System.out.println("rendering pong.");
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, width, height);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -139,7 +142,7 @@ public class Pong implements ActionListener, KeyListener{
         
         if(gameStatus == 1 || gameStatus == 2){ //graphics during game play
             //req ucmi
-            if(ucmi.isPortConnected){
+            if(ucmi.isPortConnected && !disableCMInput){
                 ucmi.ReqPlayer(1);
                 if(!bot){
                     ucmi.ReqPlayer(2);
@@ -175,7 +178,7 @@ public class Pong implements ActionListener, KeyListener{
         ////////  "PONG"  text
         if(gameStatus == 0 || gameStatus == 3){
             //req ucmi
-            if(ucmi.isPortConnected){
+            if(ucmi.isPortConnected && !disableCMInput){
                 ucmi.ReqPlayer(1);
                 ucmi.ReqPlayer(2);
             }
@@ -250,8 +253,19 @@ public class Pong implements ActionListener, KeyListener{
                 g.setFont(startFont4);
                 int pos4a = width/2 - g.getFontMetrics(startFont4).stringWidth(dummyTxt)/2;
                 int pos4b = pos4a + g.getFontMetrics(startFont4).stringWidth(startText4a) + g.getFontMetrics(startFont4).stringWidth(startText4b)/3;
-                g.drawString(startText4a, pos4a, height/2 + g.getFontMetrics(startFont4).getAscent()*5);
-                g.drawString(startText4b, pos4b, height/2 + g.getFontMetrics(startFont4).getAscent()*5);
+                g.drawString(startText4a, pos4a, height/2 + g.getFontMetrics(startFont4).getAscent()*7);
+                g.drawString(startText4b, pos4b, height/2 + g.getFontMetrics(startFont4).getAscent()*7);
+                
+                
+                
+                
+                
+                
+                Font startFont5 = new Font("Verdana", 1, 13);                
+                String addedText = "[Press "+gameControls[1][6]+" Key:   Control Settings]";
+                g.setColor(Color.WHITE);
+                g.setFont(startFont5);
+                g.drawString(addedText, width/2 - g.getFontMetrics(startFont5).stringWidth(addedText)/2, height/2 + g.getFontMetrics(startFont5).getAscent()*5);
             }
         
         } else if(gameStatus == 1){
@@ -311,9 +325,9 @@ public class Pong implements ActionListener, KeyListener{
         ///////////////////////////////////////////////////////////////////////////
         ////////////////////////////  SINCE THIS SEEMS TO GET CALLED EVERY LOOP:
         /////////////////////////////////////////////////////////////////////////
-        System.out.println("wee.");
+        //System.out.println("wee.");   //debug
         //uart controls (NON-PADDLE)
-        if (ucmi.isPortConnected && !disableCMInput){/////////////////BUG (seems like it)
+        if (ucmi.isPortConnected && !disableCMInput){
             ////////------------ OTHER CONTROLS ["accidental" repeated press is  bad, so timeout applied]
                 //vvvv Remember: Controls indexing Starts with [0]; players indexing starts with [1].
                 //String[] genControlNames = new String[]{"Up","Down","Left","Right","Start","Select","Quit"}; <--from top-((as of 10:34 pc clk))]
@@ -322,7 +336,7 @@ public class Pong implements ActionListener, KeyListener{
                 if(uartControls[i][2].isAnalogAxis()){
                     int val1 = ucmi.p[i].readAnalogAxis(uartControls[i][2]);  //0 to 255
                     val1 = val1 - 128;
-                    System.out.println("val1 = " + val1);
+                    //System.out.println("val1 = " + val1);
                     if(val1 > 64){
                         switch (uartHolddownWaitCount[i][3]){
                             case UART_HOLD_DOWN_WAIT_TIME:
@@ -690,7 +704,7 @@ public class Pong implements ActionListener, KeyListener{
     ////////////////////////////////////
     private void actRight() {
         //any right
-        System.out.println("actR."); //debug
+        //System.out.println("actR."); //debug
         
         if(gameStatus == 0){
             if(selectingDifficulty){
@@ -706,7 +720,7 @@ public class Pong implements ActionListener, KeyListener{
 
     private void actLeft() {
         //any left
-        System.out.println("actL");  //debug
+        //System.out.println("actL");  //debug
         
         if(gameStatus == 0){
             if(selectingDifficulty){
@@ -722,17 +736,21 @@ public class Pong implements ActionListener, KeyListener{
 
     private void actQuit() {
         //any quit
-        System.out.println("actQ.");  //debug
+        //System.out.println("actQ.");  //debug
         
         if(gameStatus == 1 || gameStatus == 3){
             gameStatus = 0;
             selectingDifficulty = false;
+        } else if (gameStatus == 0){
+            if(ctrlConfig.jframe == null  || !ctrlConfig.jframe.isVisible()){
+                ctrlConfig.openSettings(2, 0, 1, 2, 3, 4);
+            }
         }
     }
 
     private void actStart() {
         //any start
-        System.out.println("actSt.");     //debug
+        //System.out.println("actSt.");     //debug
         
         if(gameStatus == 0){
             if(!selectingDifficulty){
@@ -752,7 +770,7 @@ public class Pong implements ActionListener, KeyListener{
 
     private void actSelect() {
         //any select
-        System.out.println("actSel.");    //debug
+        //System.out.println("actSel.");    //debug
         
         if(gameStatus == 0){
             bot = true;
